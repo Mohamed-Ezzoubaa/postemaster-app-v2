@@ -1,0 +1,8 @@
+{
+  "name": "Postmaster Pulse - Email IP & Domain Reputation Management",
+  "description": "Production-grade deliverability and reputation intelligence platform powered by Google Postmaster Tools API, Drizzle ORM, and PostgreSQL.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

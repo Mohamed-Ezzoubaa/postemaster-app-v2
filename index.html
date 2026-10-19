@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <script>
+      // Ensure window.fetch has both a getter and a setter across window and its prototype chain
+      // so Chrome extensions, test runners, and proxy interceptors can safely reassign window.fetch.
+      (function() {
+        try {
+          var rawFetch = window.fetch;
+          var origFetch = (rawFetch && rawFetch.bind) ? rawFetch.bind(window) : rawFetch;
+          var customFetch = null;
+          var desc = {
+            configurable: true,
+            enumerable: true,
+            get: function() {
+              return customFetch || origFetch;
+            },
+            set: function(val) {
+              customFetch = val;
+            }
+          };
+          try {
+            Object.defineProperty(window, 'fetch', desc);
+          } catch (e1) {}
+          try {
+            if (typeof Window !== 'undefined' && Window.prototype) {
+              Object.defineProperty(Window.prototype, 'fetch', desc);
+            }
+          } catch (e2) {}
+          try {
+            if (window.__proto__) {
+              Object.defineProperty(window.__proto__, 'fetch', desc);
+            }
+          } catch (e3) {}
+        } catch (e) {}
+      })();
+    </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Postmaster Pulse - Email IP & Domain Reputation Management</title>
+    <meta name="description" content="Production-grade deliverability and reputation intelligence platform powered by Google Postmaster Tools API, Drizzle ORM, and PostgreSQL." />
+    <meta property="og:title" content="Postmaster Pulse - Email IP & Domain Reputation Management" />
+    <meta property="og:description" content="Production-grade deliverability and reputation intelligence platform powered by Google Postmaster Tools API, Drizzle ORM, and PostgreSQL." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  </head>
+  <body class="bg-slate-950 text-slate-100 antialiased selection:bg-indigo-500 selection:text-white">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
