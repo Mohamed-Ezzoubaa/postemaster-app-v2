@@ -457,36 +457,18 @@ export const Database = {
       verificationStatus: 'pending_dns',
       cnameRecord: `google-postmaster.${cleanDomain} CNAME gv-pm.google.com.`,
       txtRecord: `google-site-verification=${token}`,
-      domainReputation: 'HIGH',
-      spamRate: 0.0003,
-      spfSuccessRate: 0.99,
-      dkimSuccessRate: 0.99,
-      dmarcSuccessRate: 0.98,
-      tlsRate: 1.0,
-      deliveryErrorsRate: 0.001,
+      domainReputation: 'UNKNOWN',
+      spamRate: 0,
+      spfSuccessRate: 0,
+      dkimSuccessRate: 0,
+      dmarcSuccessRate: 0,
+      tlsRate: 0,
+      deliveryErrorsRate: 0,
       lastSyncedAt: new Date().toISOString(),
       createdAt: new Date().toISOString(),
     };
 
     memoryStore.domains.set(id, newDomain);
-
-    // Seed recent 30-day baseline for the new domain
-    for (let day = 30; day >= 0; day--) {
-      memoryStore.history.push({
-        id: `hist_${id}_${getPastDateStr(day)}`,
-        domainId: id,
-        date: getPastDateStr(day),
-        domainReputation: 'HIGH',
-        userReportedSpamRatio: 0.0003,
-        spfSuccessRatio: 0.99,
-        dkimSuccessRatio: 0.99,
-        dmarcSuccessRatio: 0.98,
-        inboundEncryptionRatio: 1.0,
-        outboundEncryptionRatio: 1.0,
-        deliveryErrorsRatio: 0.001,
-      });
-    }
-
     return newDomain;
   },
 

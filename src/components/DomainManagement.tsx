@@ -244,54 +244,62 @@ export const DomainManagement: React.FC<Props> = ({
 
                     {/* Spam Rate */}
                     <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`font-mono font-bold ${
-                            isSpamHigh
-                              ? 'text-rose-400'
-                              : isSpamWarning
-                              ? 'text-amber-400'
-                              : 'text-emerald-400'
-                          }`}
-                        >
-                          {(dom.spamRate * 100).toFixed(2)}%
-                        </span>
-                        {isSpamHigh && (
+                      {dom.verificationStatus === 'verified' ? (
+                        <div className="flex items-center gap-2">
                           <span
-                            title="Spam rate exceeds Google Postmaster 0.3% threshold. High risk of inbox deliverability degradation."
-                            className="text-rose-400 bg-rose-500/10 p-0.5 rounded"
+                            className={`font-mono font-bold ${
+                              isSpamHigh
+                                ? 'text-rose-400'
+                                : isSpamWarning
+                                ? 'text-amber-400'
+                                : 'text-emerald-400'
+                            }`}
                           >
-                            <AlertCircle className="w-3.5 h-3.5" />
+                            {(dom.spamRate * 100).toFixed(2)}%
                           </span>
-                        )}
-                      </div>
+                          {isSpamHigh && (
+                            <span
+                              title="Spam rate exceeds Google Postmaster 0.3% threshold. High risk of inbox deliverability degradation."
+                              className="text-rose-400 bg-rose-500/10 p-0.5 rounded"
+                            >
+                              <AlertCircle className="w-3.5 h-3.5" />
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-slate-500 font-mono text-[11px]">--</span>
+                      )}
                     </td>
 
                     {/* Auth breakdown */}
                     <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-2 text-[11px] font-mono">
-                        <span title="DKIM Pass Rate" className="text-sky-400">
-                          D: {Math.round(dom.dkimSuccessRate * 100)}%
-                        </span>
-                        <span className="text-slate-600">|</span>
-                        <span title="SPF Pass Rate" className="text-purple-400">
-                          S: {Math.round(dom.spfSuccessRate * 100)}%
-                        </span>
-                        <span className="text-slate-600">|</span>
-                        <span title="DMARC Alignment Rate" className="text-emerald-400">
-                          M: {Math.round(dom.dmarcSuccessRate * 100)}%
-                        </span>
-                      </div>
+                      {dom.verificationStatus === 'verified' ? (
+                        <div className="flex items-center gap-2 text-[11px] font-mono">
+                          <span title="DKIM Pass Rate" className="text-sky-400">
+                            D: {Math.round(dom.dkimSuccessRate * 100)}%
+                          </span>
+                          <span className="text-slate-600">|</span>
+                          <span title="SPF Pass Rate" className="text-purple-400">
+                            S: {Math.round(dom.spfSuccessRate * 100)}%
+                          </span>
+                          <span className="text-slate-600">|</span>
+                          <span title="DMARC Alignment Rate" className="text-emerald-400">
+                            M: {Math.round(dom.dmarcSuccessRate * 100)}%
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-slate-500 font-mono text-[11px]">Pending DNS</span>
+                      )}
                     </td>
 
                     {/* TLS Encryption */}
                     <td className="py-3.5 px-4 font-mono text-slate-300">
-                      {Math.round(dom.tlsRate * 100)}%
+                      {dom.verificationStatus === 'verified' ? `${Math.round(dom.tlsRate * 100)}%` : '--'}
                     </td>
 
                     {/* Delivery Errors */}
                     <td className="py-3.5 px-4 font-mono text-slate-300">
-                      {(dom.deliveryErrorsRate * 100).toFixed(2)}%
+                      {dom.verificationStatus === 'verified' ? `${(dom.deliveryErrorsRate * 100).toFixed(2)}%` : '--'}
                     </td>
 
                     {/* Last Synced */}

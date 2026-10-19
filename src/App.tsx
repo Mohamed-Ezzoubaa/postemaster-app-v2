@@ -84,11 +84,34 @@ export default function App() {
 
       // Fetch domains
       const domainsRes = await safeFetch<MonitoredDomain[]>('/api/domains');
-      if (domainsRes.ok && Array.isArray(domainsRes.data)) {
-        setDomains(domainsRes.data);
-        if (domainsRes.data.length > 0 && !selectedDomainId) {
-          setSelectedDomainId(domainsRes.data[0].id);
+      let loadedDomains = domainsRes.ok && Array.isArray(domainsRes.data) ? domainsRes.data : [];
+
+      // Client-side persistence fallback for Vercel serverless cold starts
+      try {
+        const stored = localStorage.getItem('postmaster_custom_domains');
+        if (stored) {
+          const localList: MonitoredDomain[] = JSON.parse(stored);
+          if (localList.length > 0 && loadedDomains.length === 0) {
+            for (const dom of localList) {
+              await safeFetch('/api/domains', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ domainName: dom.domainName }),
+              });
+            }
+            const reloaded = await safeFetch<MonitoredDomain[]>('/api/domains');
+            if (reloaded.ok && Array.isArray(reloaded.data) && reloaded.data.length > 0) {
+              loadedDomains = reloaded.data;
+            } else {
+              loadedDomains = localList;
+            }
+          }
         }
+      } catch {}
+
+      setDomains(loadedDomains);
+      if (loadedDomains.length > 0 && (!selectedDomainId || !loadedDomains.find(d => d.id === selectedDomainId))) {
+        setSelectedDomainId(loadedDomains[0].id);
       }
 
       // Fetch IPs
@@ -187,7 +210,18 @@ export default function App() {
       const newDomain = res.data;
       setDomains((prev) => [newDomain, ...prev]);
       setSelectedDomainId(newDomain.id);
-      showToast(`Domain ${domainName} added. DNS verification tokens generated.`, 'success');
+
+      // Persist in localStorage so it never disappears on refresh
+      try {
+        const stored = localStorage.getItem('postmaster_custom_domains');
+        const list = stored ? JSON.parse(stored) : [];
+        if (!list.some((d: any) => d.domainName === newDomain.domainName)) {
+          list.unshift(newDomain);
+          localStorage.setItem('postmaster_custom_domains', JSON.stringify(list));
+        }
+      } catch {}
+
+      showToast(`Domain ${domainName} added. DNS TXT record generated for verification.`, 'success');
       await loadInitialData();
     } catch (err: any) {
       showToast(err.message, 'error');
@@ -204,6 +238,16 @@ export default function App() {
           const remaining = domains.filter((d) => d.id !== id);
           if (remaining.length > 0) setSelectedDomainId(remaining[0].id);
         }
+
+        // Remove from localStorage
+        try {
+          const stored = localStorage.getItem('postmaster_custom_domains');
+          if (stored) {
+            const list = JSON.parse(stored).filter((d: any) => d.id !== id);
+            localStorage.setItem('postmaster_custom_domains', JSON.stringify(list));
+          }
+        } catch {}
+
         showToast('Domain removed from monitoring.', 'info');
         await loadInitialData();
       } else {
