@@ -153,8 +153,31 @@ export const DomainManagement: React.FC<Props> = ({
           <tbody className="divide-y divide-slate-800/60 font-medium">
             {filteredDomains.length === 0 ? (
               <tr>
-                <td colSpan={9} className="py-12 text-center text-slate-500">
-                  No monitored domains found matching criteria.
+                <td colSpan={9} className="py-14 text-center">
+                  <div className="flex flex-col items-center justify-center gap-3">
+                    <div className="p-3 rounded-full bg-slate-900 border border-slate-800 text-slate-500">
+                      <Globe className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-300">
+                        {domains.length === 0 ? 'No Sending Domains Monitored in this Account' : 'No domains match your filter'}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+                        {domains.length === 0
+                          ? 'Register your email sending domain or subdomain to obtain your official Google Postmaster DNS TXT / CNAME verification keys.'
+                          : 'Try clearing your search term or reputation filter.'}
+                      </p>
+                    </div>
+                    {domains.length === 0 && (
+                      <button
+                        onClick={() => setIsAddModalOpen(true)}
+                        className="mt-2 flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/30 transition-all cursor-pointer"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Add Your First Domain</span>
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ) : (

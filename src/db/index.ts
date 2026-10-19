@@ -350,14 +350,95 @@ export const Database = {
 
   // Domain operations
   async getDomains(userId?: string): Promise<MonitoredDomain[]> {
-    const domains = Array.from(memoryStore.domains.values());
-    return domains.map(d => {
+    const allDomains = Array.from(memoryStore.domains.values());
+    if (userId && userId !== 'usr_admin_postmaster_demo') {
+      const userDomains = allDomains.filter(d => d.userId === userId);
+      return userDomains.map(d => {
+        const ips = Array.from(memoryStore.ips.values()).filter(ip => ip.domainId === d.id);
+        return { ...d, ipCount: ips.length };
+      });
+    }
+    return allDomains.map(d => {
       const ips = Array.from(memoryStore.ips.values()).filter(ip => ip.domainId === d.id);
       return {
         ...d,
         ipCount: ips.length,
       };
     });
+  },
+
+  async syncUserWithGooglePostmaster(userId: string, accessToken: string): Promise<MonitoredDomain[]> {
+    try {
+      const { fetchGooglePostmasterDomains, fetchGoogleDomainTrafficStats } = await import('../lib/postmaster.ts');
+      const googleDomains = await fetchGooglePostmasterDomains(accessToken);
+      const syncedDomains: MonitoredDomain[] = [];
+
+      if (googleDomains && googleDomains.length > 0) {
+        // Clear old domains for this user before populating real ones
+        for (const [id, dom] of memoryStore.domains.entries()) {
+          if (dom.userId === userId) {
+            memoryStore.domains.delete(id);
+          }
+        }
+
+        for (const gDom of googleDomains) {
+          const cleanName = gDom.name.replace(/^domains\//, '');
+          const statsList = await fetchGoogleDomainTrafficStats(cleanName, accessToken, 30);
+          const latestStat = statsList.length > 0 ? statsList[statsList.length - 1] : null;
+
+          const id = `dom_g_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+          const domainRep = (latestStat?.domainReputation as any) || 'HIGH';
+          const spamRate = latestStat?.userReportedSpamRatio ?? 0.0002;
+
+          const newDom: MonitoredDomain = {
+            id,
+            userId,
+            domainName: cleanName,
+            verificationStatus: gDom.permission === 'OWNER' || gDom.permission === 'READER' ? 'verified' : 'pending_dns',
+            cnameRecord: `google-postmaster.${cleanName} CNAME gv-pm.google.com.`,
+            txtRecord: gDom.verificationRecord || `google-site-verification=${Math.random().toString(36).substring(2, 12)}`,
+            domainReputation: domainRep,
+            spamRate,
+            spfSuccessRate: latestStat?.spfSuccessRatio ?? 0.99,
+            dkimSuccessRate: latestStat?.dkimSuccessRatio ?? 0.99,
+            dmarcSuccessRate: latestStat?.dmarcSuccessRatio ?? 0.99,
+            tlsRate: latestStat?.inboundEncryptionRatio ?? 1.0,
+            deliveryErrorsRate: 0.001,
+            lastSyncedAt: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+          };
+
+          memoryStore.domains.set(id, newDom);
+          syncedDomains.push(newDom);
+
+          // Seed or map history
+          for (const stat of statsList) {
+            const dateMatch = stat.name.match(/\d{8}$/);
+            const dateStr = dateMatch
+              ? `${dateMatch[0].substring(0, 4)}-${dateMatch[0].substring(4, 6)}-${dateMatch[0].substring(6, 8)}`
+              : new Date().toISOString().split('T')[0];
+            memoryStore.history.push({
+              id: `hist_${id}_${dateStr}`,
+              domainId: id,
+              date: dateStr,
+              domainReputation: (stat.domainReputation as any) || 'HIGH',
+              userReportedSpamRatio: stat.userReportedSpamRatio ?? 0.0002,
+              spfSuccessRatio: stat.spfSuccessRatio ?? 0.99,
+              dkimSuccessRatio: stat.dkimSuccessRatio ?? 0.99,
+              dmarcSuccessRatio: stat.dmarcSuccessRatio ?? 0.99,
+              inboundEncryptionRatio: stat.inboundEncryptionRatio ?? 1.0,
+              outboundEncryptionRatio: 1.0,
+              deliveryErrorsRatio: 0.001,
+            });
+          }
+        }
+      }
+
+      return syncedDomains;
+    } catch (err) {
+      console.error('[Database] syncUserWithGooglePostmaster error:', err);
+      return [];
+    }
   },
 
   async getDomain(id: string): Promise<MonitoredDomain | null> {
@@ -425,6 +506,9 @@ export const Database = {
 
   // IP operations
   async getIPs(userId?: string): Promise<MonitoredIP[]> {
+    if (userId && userId !== 'usr_admin_postmaster_demo') {
+      return Array.from(memoryStore.ips.values()).filter(ip => ip.userId === userId);
+    }
     return Array.from(memoryStore.ips.values());
   },
 
@@ -483,9 +567,37 @@ export const Database = {
   },
 
   // Global fleet overview calculation
-  async getOverview(): Promise<OverviewMetrics> {
-    const domains = Array.from(memoryStore.domains.values());
-    const ips = Array.from(memoryStore.ips.values());
+  async getOverview(userId?: string): Promise<OverviewMetrics> {
+    const allDomains = Array.from(memoryStore.domains.values());
+    const allIPs = Array.from(memoryStore.ips.values());
+
+    const isCustomUser = Boolean(userId && userId !== 'usr_admin_postmaster_demo');
+    const domains = isCustomUser
+      ? allDomains.filter(d => d.userId === userId)
+      : allDomains;
+
+    const ips = isCustomUser
+      ? allIPs.filter(i => i.userId === userId)
+      : allIPs;
+
+    if (domains.length === 0) {
+      return {
+        totalDomains: 0,
+        verifiedDomains: 0,
+        totalIPs: ips.length,
+        averageSpamRate: 0,
+        highReputationCount: 0,
+        mediumReputationCount: 0,
+        lowReputationCount: 0,
+        badReputationCount: 0,
+        averageDkimRate: 0,
+        averageSpfRate: 0,
+        averageDmarcRate: 0,
+        averageTlsRate: 0,
+        criticalAlertsCount: 0,
+        lastSyncTime: 'Never',
+      };
+    }
 
     let high = 0;
     let med = 0;

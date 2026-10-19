@@ -131,6 +131,15 @@ app.get('/api/auth/google/callback', async (req, res) => {
       { expiresIn: '7d' }
     );
 
+    // Sync real Google Postmaster Tools domains if present
+    let domainsCount = 0;
+    try {
+      const synced = await Database.syncUserWithGooglePostmaster(user.id, tokenData.access_token);
+      domainsCount = synced.length;
+    } catch (syncErr) {
+      console.warn('[Postmaster initial sync warn]', syncErr);
+    }
+
     // Set HTTP cookie
     res.cookie('postmaster_session', sessionToken, {
       httpOnly: true,
@@ -143,11 +152,11 @@ app.get('/api/auth/google/callback', async (req, res) => {
     await Database.addSyncLog({
       triggeredBy: 'oauth_callback',
       status: 'success',
-      domainsProcessed: 0,
-      details: `Google Postmaster Tools OAuth connected for ${user.email}. Ready for traffic sync.`,
+      domainsProcessed: domainsCount,
+      details: `Google Postmaster Tools OAuth connected for ${user.email}. Synchronized ${domainsCount} real domains.`,
     });
 
-    res.redirect('/?auth_status=success');
+    res.redirect(`/?auth_status=success&domains_count=${domainsCount}`);
   } catch (err: any) {
     console.error('[Google Callback Exception]', err);
     res.redirect(`/?auth_status=error&error=${encodeURIComponent(err.message || 'auth_failed')}`);
@@ -317,13 +326,15 @@ app.post('/api/cron/sync-reputation', handleSyncReputation);
 
 // GET /api/overview - Key deliverability metrics fleet-wide
 app.get('/api/overview', async (req, res) => {
-  const metrics = await Database.getOverview();
+  const user = await authenticateUser(req);
+  const metrics = await Database.getOverview(user?.id);
   res.json(metrics);
 });
 
 // GET /api/domains - List monitored domains
 app.get('/api/domains', async (req, res) => {
-  const domains = await Database.getDomains();
+  const user = await authenticateUser(req);
+  const domains = await Database.getDomains(user?.id);
   res.json(domains);
 });
 
@@ -452,7 +463,8 @@ app.get('/api/domains/:id/metrics', async (req, res) => {
 
 // GET /api/ips - List monitored IP addresses
 app.get('/api/ips', async (req, res) => {
-  const ips = await Database.getIPs();
+  const user = await authenticateUser(req);
+  const ips = await Database.getIPs(user?.id);
   res.json(ips);
 });
 

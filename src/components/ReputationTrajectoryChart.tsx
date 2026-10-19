@@ -113,6 +113,20 @@ export const ReputationTrajectoryChart: React.FC<Props> = ({
     : 100;
   const highDays = history.filter((h) => h.domainReputation === 'HIGH').length;
 
+  if (domains.length === 0) {
+    return (
+      <div className="glass-panel rounded-2xl p-8 border border-slate-800 shadow-xl text-center flex flex-col items-center justify-center gap-3">
+        <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+          <TrendingUp className="w-6 h-6" />
+        </div>
+        <h3 className="text-sm font-bold text-white">No Domain Trajectory History</h3>
+        <p className="text-xs text-slate-400 max-w-md">
+          Add your sending domain in the table below to start recording daily Google Postmaster reputation, DKIM alignment, and spam rate curves.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="glass-panel rounded-2xl p-6 border border-slate-800 shadow-xl relative overflow-hidden">
       {/* Background ambient gradient */}

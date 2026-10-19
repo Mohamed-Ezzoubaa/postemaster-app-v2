@@ -13,9 +13,22 @@ function parseCookie(cookieHeader: string | null, name: string): string | null {
  * Next.js App Router: IPs List & Add
  * Endpoint: GET / POST /api/ips
  */
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const ips = await Database.getIPs();
+    const cookieHeader = request.headers.get('cookie');
+    const token =
+      parseCookie(cookieHeader, 'postmaster_session') ||
+      request.headers.get('authorization')?.replace('Bearer ', '');
+
+    let userId: string | undefined;
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+        if (decoded?.userId) userId = decoded.userId;
+      } catch {}
+    }
+
+    const ips = await Database.getIPs(userId);
     return Response.json(ips, { status: 200 });
   } catch (err: any) {
     return Response.json(

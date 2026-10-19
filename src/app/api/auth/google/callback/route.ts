@@ -70,23 +70,32 @@ export async function GET(request: Request) {
       tokenExpiresAt: new Date(Date.now() + (tokenData.expires_in || 3600) * 1000).toISOString(),
     });
 
-    // 4. Issue secure session JWT
+    // 4. Sync real Google Postmaster Tools domains if present
+    let domainsCount = 0;
+    try {
+      const synced = await Database.syncUserWithGooglePostmaster(user.id, tokenData.access_token);
+      domainsCount = synced.length;
+    } catch (syncErr) {
+      console.warn('[Postmaster initial sync warn]', syncErr);
+    }
+
+    // 5. Issue secure session JWT
     const sessionToken = jwt.sign(
       { userId: user.id, email: user.email, name: user.name },
       jwtSecret,
       { expiresIn: '7d' }
     );
 
-    // 5. Add audit log
+    // 6. Add audit log
     await Database.addSyncLog({
       triggeredBy: 'oauth_callback',
       status: 'success',
-      domainsProcessed: 0,
-      details: `Google Postmaster Tools OAuth connected for ${user.email}. Ready for traffic sync.`,
+      domainsProcessed: domainsCount,
+      details: `Google Postmaster Tools OAuth connected for ${user.email}. Synchronized ${domainsCount} real domains.`,
     });
 
     const headers = new Headers();
-    headers.set('Location', `${appUrl}/?auth_status=success`);
+    headers.set('Location', `${appUrl}/?auth_status=success&domains_count=${domainsCount}`);
     headers.set(
       'Set-Cookie',
       `postmaster_session=${sessionToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}${

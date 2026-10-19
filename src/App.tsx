@@ -365,8 +365,39 @@ export default function App() {
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-8 py-6 space-y-6">
+        {/* Active Authenticated Google User with 0 Domains Banner */}
+        {user && user.id !== 'usr_admin_postmaster_demo' && domains.length === 0 && (
+          <div className="rounded-2xl p-5 bg-gradient-to-r from-emerald-950/40 via-slate-900 to-indigo-950/40 border border-emerald-500/30 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div className="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-400 shrink-0 mt-0.5">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  Connected to Google Account ({user.email})
+                  <span className="text-[10px] font-mono px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full font-semibold">
+                    Live Session Active
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
+                  Your Google account has been authenticated. You have 0 verified domains in your Google Postmaster console yet. Click <strong className="text-white">Add Domain</strong> below to register your sending domain and obtain your DNS TXT / CNAME verification tokens.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={handleLoginDemo}
+                className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Preview Demo Fleet Data
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Google OAuth Banner if demo mode or unauthenticated */}
-        {(!user || !oauthConfigured) && (
+        {(!user || user.id === 'usr_admin_postmaster_demo') && (
           <div className="rounded-2xl p-4 sm:p-5 bg-gradient-to-r from-indigo-950/60 via-slate-900/80 to-slate-900 border border-indigo-500/30 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-start gap-3.5">
               <div className="p-2.5 rounded-xl bg-indigo-500/20 text-indigo-400 shrink-0 mt-0.5">
